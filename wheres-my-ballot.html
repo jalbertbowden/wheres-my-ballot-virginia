@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Where's My Ballot - Virginia Elections Tool</title>
+    <link rel="stylesheet" type="text/css" href="leaflet.css" />
+    <link rel="stylesheet" type="text/css" href="wheres-my-ballot.css" />
+    <script src="leaflet.js"></script>
+    <script src="virginia-boundaries-var.geojson"></script>
+  </head>
+  <body>
+    <div id="content">
+      <form id="form-google-civic-api" action="" method="POST">
+        <div id="div-fieldset">
+        <fieldset>
+          <legend class="screen-reader-text">Enter Your Address</legend>
+          <label for="address">
+            <span class="block">Enter Your Address (ex: 807 N Robinson St, Richmond, VA 23220)</span>
+            <input type="text" id="address" name="address" required="required" /></label>
+          </fieldset>
+          <input type="submit" id="submit" name="submit" value="Where's Your Ballot?" />
+          </div>
+          <div id="container"></div>
+        </form>
+      <div id="map"></div>
+      <form id="form-census-geocoder" name="form-census-geocoder" action="" method="POST">
+        <input id="census-geo-url" name="census-geo-url" value="" type="hidden" />
+        <input type="submit" id="submit-geo" name="submit-geo" />
+      </form>
+    </div> <!-- #content -->
+  </body>
+<!-- <script src="virginia-administrative-boundaries-localities-cities-counties-and-towns-var.geojson" defer="defer"></script> -->
+<script src="wheres-my-ballot.js"></script>
+</html>
