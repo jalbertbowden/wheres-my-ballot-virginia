@@ -2,6 +2,10 @@ function wheresMyBallot(){
   var inputAddress = document.getElementById('address');
   var htmlFormDiv = document.getElementById('div-fieldset');
   var inputSubmit = document.getElementById('submit');
+  var apiKey = 'AIzaSyCkI5hA2ssp_BsYeMCK3z9lxIf4YqDSt7I';
+  var urlAPIKey = 'key=';
+  var virginiaOCD = 'ocd-division/country:us/state:va';
+  
   var xhrAddress = [];
   var map;
   var geoJSONStyle = {
@@ -23,7 +27,7 @@ function wheresMyBallot(){
   // make initial map with state boundary outline
   function leafletInit(){
     map = L.map('map').setView([38, -79], 8);
-  	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     L.geoJson(virginiaBoundaries, {style:geoJSONStyle}).addTo(map);
@@ -47,9 +51,9 @@ function wheresMyBallot(){
   };
   
   function serialize(str){
-  	str = str.replace(/ /g, '%20');
-  	str = str.replace(/,/g, '');
-  	return str;
+    str = str.replace(/ /g, '%20');
+    str = str.replace(/,/g, '');
+    return str;
   };
   
   var htmlForm = document.getElementById('form-google-civic-api');
@@ -58,30 +62,35 @@ function wheresMyBallot(){
     inputSubmit.setAttribute('disabled', 'disabled');
     inputAddressUserInput = inputAddress.value;
     inputAddress = serialize(inputAddressUserInput);
-  	var civicAPIURL = 'https://www.googleapis.com/civicinfo/v2/voterinfo?key=AIzaSyCkI5hA2ssp_BsYeMCK3z9lxIf4YqDSt7I&address='+inputAddress+'&electionId=2000';
-  	xhrAddress.push(inputAddress);
-  	fetch(civicAPIURL);
-  	//console.log("HERE");
-  	//console.log(civicAPIVoterInfoResponseVal);
-  	//getElectionInfo(civicAPIVoterInfoResponseVal);
-  	return false;
+    var civicAPIURL = 'https://www.googleapis.com/civicinfo/v2/voterinfo?key=AIzaSyCkI5hA2ssp_BsYeMCK3z9lxIf4YqDSt7I&address='+inputAddress+'&electionId=2000';
+    xhrAddress.push(inputAddress);
+    fetch(civicAPIURL);
+    googleCivicAPIElections();
+    googleCivicAPIState(inputAddress);
+    
+    //console.log("HERE");
+    //console.log(civicAPIVoterInfoResponseVal);
+    //getElectionInfo(civicAPIVoterInfoResponseVal);
+    return false;
   });
   
 
   function fetch(civicAPIURL) {
-  	var civicAPIVoterInfoResponse;
+    var civicAPIVoterInfoResponse;
     var xhr = new XMLHttpRequest();
     xhr.open('POST', "wheres-my-ballot-civic-api-curl.php", true);
     xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhr.onload = function () {
       civicAPIVoterInfoResponse = JSON.parse(this.response);
-      //console.log('civic api voter info json response');
-      //console.log(civicAPIVoterInfoResponse);
+      console.log('civic api voter info json response');
+      console.log(civicAPIVoterInfoResponse);
       let votingLocationComplete = civicAPIVoterInfoResponse.normalizedInput.line1+', '+civicAPIVoterInfoResponse.normalizedInput.city+', '+civicAPIVoterInfoResponse.normalizedInput.state+' '+civicAPIVoterInfoResponse.normalizedInput.zip;
       normalizedInputHTML(civicAPIVoterInfoResponse.normalizedInput.line1, civicAPIVoterInfoResponse.normalizedInput.city, civicAPIVoterInfoResponse.normalizedInput.state, civicAPIVoterInfoResponse.normalizedInput.zip);
       userOutputHTML(civicAPIVoterInfoResponse.pollingLocations, votingLocationComplete);
-      googleCivicAPIElection(civicAPIVoterInfoResponse.election);
-      googleCivicAPIState(civicAPIVoterInfoResponse.state);
+      //console.log('above');
+      //console.log(civicAPIVoterInfoResponse.elections);
+      //googleCivicAPIElection(civicAPIVoterInfoResponse.election);
+      //googleCivicAPIState(civicAPIVoterInfoResponse.state);
       
       //return civicAPIVoterInfoResponse;
     };
@@ -89,16 +98,92 @@ function wheresMyBallot(){
     //return xhr.onload;
   }
   
-  function googleCivicAPIElection(civicAPIVoterInfoResponseElection){
-    console.log(civicAPIVoterInfoResponseElection);
-    //console.log('please election');
-    //console.log(civicAPIVoterInfoResponseElection);
+  
+  // for both below/ALL??? api function calls!!!
+  // need to create URL before passing into php for json response!
+  // voterInfoQuery url is
+  //   'https://www.googleapis.com/civicinfo/v2/voterinfo?address=151%20Louise%20Dr%2C%20Newport%20News%2C%20VA%2023601&electionId=2000&returnAllAvailableData=true&key=[YOUR_API_KEY]' \
+
+  
+  
+  function googleCivicAPIElections(){ // https://www.googleapis.com/civicinfo/v2/elections?key=[YOUR_API_KEY] 'https://www.googleapis.com/civicinfo/v2/elections?key=AIzaSyCkI5hA2ssp_BsYeMCK3z9lxIf4YqDSt7I';
+    var civicAPIElectionsURL = 'https://www.googleapis.com/civicinfo/v2/elections?';
+    civicAPIElectionsURL = civicAPIElectionsURL+urlAPIKey+apiKey;
+    // console.log('api url call: '+civicAPIElectionsURL);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', "query-civic-api-elections.php", true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhr.onload = function () {
+      var civicAPIElectionsResponse = JSON.parse(this.response);
+      var electionsData = civicAPIElectionsResponse.elections;
+      for(var x=0;x<electionsData.length; x++){
+        var electionID = electionsData[x].id;
+        var electionName = electionsData[x].name;
+        var electionDay = electionsData[x].electionDay;
+        var ocdDivisionID = electionsData[x].ocdDivisionId;
+        //console.log('election id: '+electionID+', election name: '+electionName+', election day: '+electionDay+', ocd division id: '+ocdDivisionID);
+        
+        // determine if election is in virginia using ocdDivisionID
+        if(virginiaOCD === ocdDivisionID){
+          // election is in virginia's ocd id
+          // do something
+          
+        } else {
+          // do something else!!
+          // ideally return message to content element successful if execution goes
+          console.log('ocd division ids do not much!');
+          // = 'Error! OCD Division IDs do not match!';
+        }
+        
+      };
+      // let votingLocationComplete = civicAPIVoterInfoResponse.normalizedInput.line1+', '+civicAPIVoterInfoResponse.normalizedInput.city+', '+civicAPIVoterInfoResponse.normalizedInput.state+' '+civicAPIVoterInfoResponse.normalizedInput.zip;
+      // normalizedInputHTML(civicAPIVoterInfoResponse.normalizedInput.line1, civicAPIVoterInfoResponse.normalizedInput.city, civicAPIVoterInfoResponse.normalizedInput.state, civicAPIVoterInfoResponse.normalizedInput.zip);
+      // userOutputHTML(civicAPIVoterInfoResponse.pollingLocations, votingLocationComplete);
+    };
+    xhr.send(civicAPIElectionsURL);
   };
   
-  function googleCivicAPIState(civicAPIVoterInfoResponseState){
-    //console.log(civicAPIVoterInfoResponseState);
-    //console.log('please state');
-    //console.log(civicAPIVoterInfoResponseState[0]);
+  // needs electionID variable!!!
+  // XXX
+  function googleCivicAPIState(inputAddress){
+    console.log('post serialize: '+inputAddress);
+    //   'https://www.googleapis.com/civicinfo/v2/voterinfo?address=151%20Louise%20Dr%2C%20Newport%20News%2C%20VA%2023601&electionId=2000&returnAllAvailableData=true&key=[YOUR_API_KEY]'
+    // 'https://www.googleapis.com/civicinfo/v2/voterinfo?address=
+    // &electionId=2000
+    // &returnAllAvailableData=true
+    // &key=[YOUR_API_KEY]' \
+
+    var civicAPIVoterInfoURL = 'https://www.googleapis.com/civicinfo/v2/voterinfo?address='+inputAddress+'&electionId=2000&returnAllAvailableData=true';
+    // console.log('user address street: '+document.getElementById('user-address-street').value);
+    
+    console.log('api url call: '+civicAPIVoterInfoURL);
+    civicAPIVoterInfoURL = civicAPIVoterInfoURL+urlAPIKey+apiKey;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', "query-civic-api-voterinfo.php", true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhr.onload = function () {
+      var civicAPIVoterInfoResponse = JSON.parse(this.response);
+      
+      var voterInfoData = civicAPIVoterInfoResponse.state;
+      console.log('voter info state data: '+voterInfoData[0]);
+      for(var x=0;x<voterInfoData.length; x++){
+        //var electionID = electionsData[x].id;
+        //var electionName = electionsData[x].name;
+        //var electionDay = electionsData[x].electionDay;
+        //var ocdDivisionID = electionsData[x].ocdDivisionId;
+        //console.log('election id: '+electionID+', election name: '+electionName+', election day: '+electionDay+', ocd division id: '+ocdDivisionID);
+        
+        // determine if election is in virginia using ocdDivisionID
+        
+      };
+      // let votingLocationComplete = civicAPIVoterInfoResponse.normalizedInput.line1+', '+civicAPIVoterInfoResponse.normalizedInput.city+', '+civicAPIVoterInfoResponse.normalizedInput.state+' '+civicAPIVoterInfoResponse.normalizedInput.zip;
+      // normalizedInputHTML(civicAPIVoterInfoResponse.normalizedInput.line1, civicAPIVoterInfoResponse.normalizedInput.city, civicAPIVoterInfoResponse.normalizedInput.state, civicAPIVoterInfoResponse.normalizedInput.zip);
+      // userOutputHTML(civicAPIVoterInfoResponse.pollingLocations, votingLocationComplete);
+    };
+    xhr.send(civicAPIVoterInfoURL);
+    
+    
+    
   };
   
   
@@ -156,16 +241,16 @@ function wheresMyBallot(){
           var addressName = userAddress;
           
           function censusGeocodeSyntax(str){
-          	str = str.replace(/ /g, '+');
-          	return str;
+            str = str.replace(/ /g, '+');
+            return str;
           };
           function reformatCensusGeocodeSyntax(str){
-          	str = str.replace(/ /g, '%2B');
-          	str = str.replace(/\//g, '%2F');
-          	str = str.replace(/:/g, '%3A');
-          	str = str.replace(/&/g, '%26');
-          	str = str.replace(/=/g, '%3D');
-          	return str;
+            str = str.replace(/ /g, '%2B');
+            str = str.replace(/\//g, '%2F');
+            str = str.replace(/:/g, '%3A');
+            str = str.replace(/&/g, '%26');
+            str = str.replace(/=/g, '%3D');
+            return str;
           };
           
           userAddressStreet = '?street='+censusGeocodeSyntax(userAddressStreet);
@@ -196,7 +281,7 @@ function wheresMyBallot(){
     var localityNames = virginiaLocalityBoundaries.features;
     for(var x=0;x<localityNames.length;x++){
       if(localityNames[x].properties.NAME === userAddressCityPerm) {
-      	var thisLocalityGeoJSON = localityNames[x].geometry;
+        var thisLocalityGeoJSON = localityNames[x].geometry;
         console.log("HOLLA: "+userAddressCityPerm);
         console.log(thisLocalityGeoJSON);
         makeLeafletMapPolygon(thisLocalityGeoJSON);
@@ -205,19 +290,19 @@ function wheresMyBallot(){
   };
   
   function newXHRGeo(censusGeoURL, addressName){
-  	var xhr = new XMLHttpRequest();
-  	xhr.onload = function () {
-	  if (xhr.status >= 200 && xhr.status < 300) {
-		var data = JSON.parse(xhr.response);
-		data = data.contents.result.addressMatches[0].coordinates;
-		var lat = parseFloat(data.x);
-		var lon = parseFloat(data.y);
-		var latlon = [lon, lat];
-		makeLeafletMapPoint(latlon, addressName)
-		// console.log(JSON.parse(data));
-	  } else {
-		// console.log('The request failed!');
-	  }
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+    if (xhr.status >= 200 && xhr.status < 300) {
+    var data = JSON.parse(xhr.response);
+    data = data.contents.result.addressMatches[0].coordinates;
+    var lat = parseFloat(data.x);
+    var lon = parseFloat(data.y);
+    var latlon = [lon, lat];
+    makeLeafletMapPoint(latlon, addressName)
+    // console.log(JSON.parse(data));
+    } else {
+    // console.log('The request failed!');
+    }
     };
     xhr.open('GET', censusGeoURL);
     xhr.send();
@@ -227,7 +312,7 @@ function wheresMyBallot(){
   var errorMessageUserInput = ' not found in <a href="https://nominatim.openstreetmap.org/">OSM\'s Nominatim\'s database</a>!';
   
   function errorMessage(inputAddressUserInput){
-  	turnOffOutputs();
+    turnOffOutputs();
     var errorMessageContent = 'Error! Address: '+inputAddressUserInput+errorMessageUserInput;
     var errorMessageHTML = document.createElement('div');
     errorMessageHTML.setAttribute('id', 'error-message');
@@ -236,8 +321,8 @@ function wheresMyBallot(){
   };
   
   function turnOffOutputs(){
-  	var htmlVotingList = document.getElementById('polling-locations-list');
-  	htmlVotingList.setAttribute('class', 'hide');
+    var htmlVotingList = document.getElementById('polling-locations-list');
+    htmlVotingList.setAttribute('class', 'hide');
   };
 };
 wheresMyBallot();
